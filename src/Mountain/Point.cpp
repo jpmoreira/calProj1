@@ -115,3 +115,7 @@ int Point::getID(){
 int Point::getNrTourists() {
 	return lostTourists;
 }
+
+void Point::addTourist(int nr) {
+	lostTourists+=nr;
+}

@@ -20,14 +20,14 @@ fstream Mountain::tempOutputFile(tempFilePath,ios_base::in|ios_base::out|ios_bas
 
 
 
-Mountain::Mountain():mountainGraph(new Graph<Point>()),nrToEvaquate(0),nrEvaquated(0),meanTime(-1),viewer(new GraphViewer(600,600,true,7772)),drawOnEdit(true),edited(true){
+Mountain::Mountain():mountainGraph(new Graph<Point>()),viewer(new GraphViewer(600,600,true,7772)),drawOnEdit(true),edited(true),exit(NULL){
 
 	viewer->createWindow(600, 600);
 	viewer->defineEdgeColor("blue");
 	viewer->defineVertexColor("lightGray");
 }
 
-Mountain::Mountain(string sourceFile):mountainGraph(new Graph<Point>()),nrToEvaquate(0),nrEvaquated(0),meanTime(-1),viewer(new GraphViewer(600,600,true,7772)),drawOnEdit(true),edited(true){
+Mountain::Mountain(string sourceFile):mountainGraph(new Graph<Point>()),viewer(new GraphViewer(600,600,true,7772)),drawOnEdit(true),edited(true),exit(NULL){
 	fstream src(sourceFile.c_str());
 	string instruction;
 	viewer->createWindow(600, 600);
@@ -53,7 +53,7 @@ bool Mountain::saveToFile(string path) {
 	newFileStream.open(path.c_str());
 	ifstream temp(tempFilePath);
 	newFileStream<<temp.rdbuf();
-	newFileStream<<"PR "<<nrToEvaquate<<" "<<nrEvaquated<<" "<<meanTime<<endl;
+	newFileStream<<"PR "<<exit<<endl;
 	newFileStream.close();
 	temp.close();
 
@@ -159,17 +159,15 @@ bool Mountain::removeRoad(string pt1Name, string pt2Name) {
 	}
 
 }
-bool Mountain::addTouristPoint(string ptName, int nr) {
-	Point pt(ptName,nr);
+bool Mountain::addPoint(string ptName) {
+	Point pt(ptName);
 	if(mountainGraph->addVertex(pt)){
 		edited=true;
 		cout<<"Adding a point with name= "<<ptName;
-		if(nr!=0){
-			cout<<" with "<<nr<<" tourist.";
-		}
+
 		cout<<" (id= "<<pt.getID()<<")."<<endl;
 
-		tempOutputFile<<"AT "<<ptName<<" "<<nr<<endl;//output to file
+		tempOutputFile<<"AP "<<ptName<<endl;//output to file
 
 		//viewer stuff
 		viewer->addNode(pt.getID());//insert node
@@ -196,11 +194,13 @@ bool Mountain::addVehicleToPoint(string ptName, int nr_seats) {
 	if(v!=NULL && thePt.getVehicle()==NULL){//if there is such a point with no vehicle in it
 		edited=true;
 		thePt.setVehicle(theVehicle);//TODO not working see why
-		cout<<"Adding a vehicle of capacity"<<nr_seats<<"to point with name= "<<ptName<<endl;
+		v->setInfo(thePt);
+		vehiclesPointArray.push_back(v);//add to array
+
+		cout<<"Adding a vehicle of capacity "<<nr_seats<<" to point with name= "<<ptName<<endl;
 
 		tempOutputFile<<"AV "<<ptName<<" "<<nr_seats<<endl;
 		viewer->setVertexLabel(thePt.getID(),makeLabel(thePt));
-		v->setInfo(thePt);
 		if(drawOnEdit){
 			viewer->rearrange();
 		}
@@ -234,16 +234,24 @@ void Mountain::parseInstruction(string& inst) {
 		parseAddRoadInstruction(instructionParams);
 	else if(instructionName=="RR")
 		parseRemoveRoadInstruction(instructionParams);
-	else if(instructionName=="AT")
-		parseAddTouristInstruction(instructionParams);
+	else if(instructionName=="AP")
+		parseAddPointInstruction(instructionParams);
 	else if(instructionName=="AV")
 		parseAddVehicleInstruction(instructionParams);
 	else if(instructionName=="PR")
 		parseParametersInstruction(instructionParams);
+	else if(instructionName== "AT")
+		parseAddTouristInstruction(instructionParams);
 }
 
 void Mountain::parseRemovePointInstruction(string& s) {
 	removePoint(s);
+}
+void Mountain::parseAddTouristInstruction(string& s) {
+	int space=s.find(' ',0);
+	string name=s.substr(0,space);
+	int nr=atoi(s.substr(space+1).c_str());
+	AddTouristToPoint(name,nr);
 }
 
 void Mountain::parseAddRoadInstruction(string& s) {
@@ -262,17 +270,13 @@ void Mountain::parseRemoveRoadInstruction(string& s) {
 	removeRoad(origin,destination);
 }
 
-void Mountain::parseAddTouristInstruction(string& s) {
+void Mountain::parseAddPointInstruction(string& s) {
 	int name_end=s.find(' ',0);
 	string name=s.substr(0,name_end);
-	int nr=atoi(s.substr(name_end+1).c_str());
-	addTouristPoint(name,nr);
+	addPoint(name);
 
 }
 
-bool Mountain::addEmptyPoint(string name) {
-	return addTouristPoint(name,0);
-}
 
 void Mountain::parseAddVehicleInstruction(string& s) {
 	int name_end=s.find(' ',0);
@@ -288,18 +292,17 @@ fstream& Mountain::getFile() {
 }
 
 void Mountain::parseParametersInstruction(string& s) {
-	int nrToEvaq_end=s.find(' ',0);
-	int nrEvaqed_end=s.find(' ',nrToEvaq_end+1);
-	nrToEvaquate=atoi(s.substr(0,nrToEvaq_end).c_str());
-	nrEvaquated=atoi(s.substr(nrToEvaq_end+1,nrEvaqed_end-nrToEvaq_end).c_str());
-	meanTime=atoi(s.substr(nrEvaqed_end+1).c_str());
-	cout<<"Setting up parameters: nrToEvaquate= "<<nrToEvaquate<<" nrEvaquated= "<<nrEvaquated<<" meanTime= "<<meanTime<<endl;
+	setExit(s);
 }
 
 string Mountain::makeLabel(Point& pt) {
 		stringstream myStr;
 		myStr<<pt.getName();
-	if(pt.getVehicle()==NULL){//if it has no vehicle
+	if(exit!=NULL && exit->getInfo()==pt){//if it's exit
+		myStr<<" E("<<pt.getNrTourists()<<")";
+	}
+
+	else if(pt.getVehicle()==NULL){//if it has no vehicle
 		myStr<<" T("<<pt.getNrTourists()<<")";
 
 	}
@@ -395,6 +398,53 @@ Point Mountain::findNearestAverageNonOccupiedPoint() {
 			return Point(name);}
 		return mountainGraph->getVertexSet()[index]->getInfo();
 	}
+
+bool Mountain::AddTouristToPoint(string name, int nrToAdd) {
+	Point thePt(name);
+	Vertex<Point> *v=mountainGraph->getVertex(thePt);
+	if(v==NULL){
+		cout<<"Impossible to add "<<nrToAdd<<" Tourists to point named "<<name<<endl;
+		return false;}
+	int index=v->getIndex();
+	thePt=v->getInfo();
+	thePt.addTourist(nrToAdd);
+	v->setInfo(thePt);
+
+	tempOutputFile<<"AT "<<name<<" "<<nrToAdd<<endl;
+	cout<<"Adding "<<nrToAdd<<" Tourists to point named "<<name<<endl;
+	viewer->setVertexLabel(thePt.getID(),makeLabel(thePt));//define it's label
+	if(drawOnEdit){
+		viewer->rearrange();
+	}
+		return true;
+}
+
+void Mountain::setExit(string& n) {
+	Point testPt(n);
+	Vertex<Point> *v=mountainGraph->getVertex(testPt);
+	if(v==NULL){
+		cout<<"Impossible to setup Exit as Point "<<n<<endl;
+		return;
+	}
+	cout<<"Exit is point named: "<<n<<endl;
+	exit=v;
+	testPt=v->getInfo();
+
+	viewer->setVertexLabel(testPt.getID(),makeLabel(testPt));//define it's label
+	if(drawOnEdit){
+		viewer->rearrange();
+	}
+
+}
+
+void Mountain::setExit(char* str) {
+	string theStr(str);
+	setExit(theStr);
+}
+
+void Mountain::moveVehicleTo(Vertex<Point>* origin,
+		Vertex<Point>* destination) {
+}
 
 void Mountain::fillMatrixForRow(int index) {
 	vector<Vertex<Point> *> theArray=mountainGraph->getVertexSet();

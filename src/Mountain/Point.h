@@ -94,6 +94,7 @@ public:
 	bool operator==(Point const& pt) const;
 	int getID();
 	int getNrTourists();
+	void addTourist(int nr);
 };
 
 #endif /* POINT_H_ */

@@ -21,8 +21,9 @@ class Mountain {
 private:
 	Graph<Point> *mountainGraph;
 	GraphViewer *viewer;
-	int nrToEvaquate;
-	int nrEvaquated;
+	Vertex<Point> *exit;
+
+	vector< Vertex<Point> *> vehiclesPointArray;
 	bool drawOnEdit;
 	bool edited;
 
@@ -31,23 +32,23 @@ private:
 
 
 	static fstream tempOutputFile;
-	double meanTime;
 
 public:
 	Mountain();
 	Mountain(string sourceFile);
 	bool saveToFile(string path);
-	bool addEmptyPoint(string name);
-
 	bool removePoint(string name);
 	bool addRoad(string pt1Name,string pt2Name,int weight);
 	bool removeRoad(string pt1Name,string pt2Name);
 	void printPointsList();
-	bool addTouristPoint(string ptName,int nr);
+	bool addPoint(string ptName);
 	bool addVehicleToPoint(string ptName,int nr_seats);
 	void computeDistances();
 	void printDistanceMatrix();
 	void printPathMatrix();
+	void setExit(string& n);
+	void setExit(char*);
+	bool AddTouristToPoint(string name, int nrToAdd);
 	~Mountain();
 	static fstream & getFile();
 	void placeVehicles(int nrVehicles,int capacity);
@@ -59,9 +60,11 @@ private:
 	void parseRemovePointInstruction(string &s);
 	void parseAddRoadInstruction(string &s);
 	void parseRemoveRoadInstruction(string &s);
-	void parseAddTouristInstruction(string &s);
+	void parseAddPointInstruction(string &s);
 	void parseAddVehicleInstruction(string &s);
 	void parseParametersInstruction(string &s);
+	void parseAddTouristInstruction(string &s);
+	void doOneMovement();
 
 	string makeLabel(Point &pt);
 	int generateEdgeID(int sourceID,int destID);
