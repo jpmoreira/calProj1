@@ -33,6 +33,7 @@ class Vertex {
 	bool processing;
 	int indegree;
 	double dist;
+	int index;
 public:
 
 	Vertex(T in);
@@ -46,7 +47,8 @@ public:
 
 	int getDist() const;
 	int getIndegree() const;
-
+	void setIndex(int i);
+	int getIndex();
 	bool operator<(const Vertex<T> vertex);
 
 	Vertex* path;
@@ -215,6 +217,7 @@ bool Graph<T>::addVertex(const T &in) {
 	for (; it!=ite; it++)
 		if ((*it)->info == in) return false;
 	Vertex<T> *v1 = new Vertex<T>(in);
+	v1->setIndex(vertexSet.size());
 	vertexSet.push_back(v1);
 	return true;
 }
@@ -761,6 +764,16 @@ bool Graph<T>::hasEdge(T& originInfo, T& destInfo) const {
 	else{
 		return false;
 	}
+}
+
+template<class T>
+inline void Vertex<T>::setIndex(int i) {
+	index=i;
+}
+
+template<class T>
+inline int Vertex<T>::getIndex() {
+	return index;
 }
 
 #endif /* GRAPH_H_ */

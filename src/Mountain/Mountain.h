@@ -27,6 +27,7 @@ private:
 	bool edited;
 
 	vector<vector<int> > distanceMatrix;
+	vector<vector<int> > pathMatrix;
 
 
 	static fstream tempOutputFile;
@@ -44,14 +45,16 @@ public:
 	void printPointsList();
 	bool addTouristPoint(string ptName,int nr);
 	bool addVehicleToPoint(string ptName,int nr_seats);
-	void computeDistanceMatrix();
+	void computeDistances();
 	void printDistanceMatrix();
+	void printPathMatrix();
 	~Mountain();
 	static fstream & getFile();
-	Point findNearestAverageNonOccupiedPoint();//TODO do this to calculate place where to place the vehicle
+	void placeVehicles(int nrVehicles,int capacity);
 private:
 
 
+	Point findNearestAverageNonOccupiedPoint();
 	void parseInstruction(string &inst);
 	void parseRemovePointInstruction(string &s);
 	void parseAddRoadInstruction(string &s);
@@ -67,6 +70,9 @@ private:
 	int shortestDistance(Point pt1, Point pt2);//TODO
 
 	void fillMatrixForRow(int index);
+
+
+
 
 };
 

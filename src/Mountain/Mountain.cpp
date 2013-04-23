@@ -197,8 +197,10 @@ bool Mountain::addVehicleToPoint(string ptName, int nr_seats) {
 		edited=true;
 		thePt.setVehicle(theVehicle);//TODO not working see why
 		cout<<"Adding a vehicle of capacity"<<nr_seats<<"to point with name= "<<ptName<<endl;
+
 		tempOutputFile<<"AV "<<ptName<<" "<<nr_seats<<endl;
 		viewer->setVertexLabel(thePt.getID(),makeLabel(thePt));
+		v->setInfo(thePt);
 		if(drawOnEdit){
 			viewer->rearrange();
 		}
@@ -326,7 +328,7 @@ int Mountain::generateEdgeID(int sourceID, int destID) {
 }
 
 int Mountain::shortestDistance(Point pt1, Point pt2) {
-	computeDistanceMatrix();//only executed one time or if graph is edited
+	computeDistances();//only executed one time or if graph is edited
 	int pt1Index=-1;
 	int pt2Index=-1;
 	vector<Vertex<Point> *> theArray=mountainGraph->getVertexSet();
@@ -342,15 +344,19 @@ int Mountain::shortestDistance(Point pt1, Point pt2) {
 	else{return -1;}
 }
 
-void Mountain::computeDistanceMatrix() {
+void Mountain::computeDistances() {
 	if(edited){
 
 		//initialize vector
 		int size=mountainGraph->getNumVertex();
 
 		distanceMatrix=vector< vector<int> > (size);
+		pathMatrix=vector< vector<int> > (size);
 
-		for(int i=0;i<size;i++){distanceMatrix[i]=vector<int> (size);}
+		for(int i=0;i<size;i++){
+			distanceMatrix[i]=vector<int> (size);
+			pathMatrix[i]=vector<int> (size);
+		}
 
 		vector<Vertex<Point> *> theArray=mountainGraph->getVertexSet();
 		for(int i=0;i<size;i++){
@@ -367,7 +373,7 @@ void Mountain::computeDistanceMatrix() {
 }
 
 Point Mountain::findNearestAverageNonOccupiedPoint() {
-	computeDistanceMatrix();
+	computeDistances();
 	int index=-1;
 	int value=INT_INFINITY;
 	for(int i=0;i<distanceMatrix.size();i++){
@@ -384,15 +390,26 @@ Point Mountain::findNearestAverageNonOccupiedPoint() {
 			}
 		}
 	}
-		if(index==-1){return NULL;}
+		if(index==-1){
+			string name="no_name";
+			return Point(name);}
 		return mountainGraph->getVertexSet()[index]->getInfo();
 	}
 
 void Mountain::fillMatrixForRow(int index) {
 	vector<Vertex<Point> *> theArray=mountainGraph->getVertexSet();
 	for(int i=0;i<distanceMatrix.size();i++){
+
 		distanceMatrix[index][i]=theArray[i]->getDist();
 		distanceMatrix[i][index]=distanceMatrix[index][i];
+
+		if(theArray[i]->path!=NULL){
+			pathMatrix[i][index]=theArray[i]->path->getIndex();
+		}
+		else{
+			pathMatrix[i][index]=-1;
+		}
+
 
 	}
 }
@@ -404,4 +421,27 @@ void Mountain::printDistanceMatrix() {
 		}
 		cout<<endl;
 	}
+}
+void Mountain::printPathMatrix(){
+	cout<<endl;
+	for(int i=0;i<pathMatrix.size();i++){
+			for(int f=0;f<pathMatrix.size();f++){
+				cout<<" "<<pathMatrix[i][f]<<" ";
+			}
+			cout<<endl;
+		}
+}
+
+void Mountain::placeVehicles(int nrVehicles, int capacity) {
+
+	drawOnEdit=false;
+	for(int i=0;i<nrVehicles;i++){
+		Point pt=findNearestAverageNonOccupiedPoint();
+		bool possibleToAdd=addVehicleToPoint(pt.getName(),capacity);
+		if (!possibleToAdd){
+			cout<<"Impossible to auto add all Vehicles to graph. "<<i<<" added so far."<<endl;
+		}
+	}
+	drawOnEdit=true;
+
 }
