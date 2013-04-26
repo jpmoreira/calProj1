@@ -350,7 +350,7 @@ void Mountain::computeDistances() {
 		for(int i=0;i<size;i++){
 
 			mountainGraph->dijkstraShortestPath(theArray[i]->getInfo());
-			fillMatrixForRow(i);
+			fillDistanceMatrixForRow(i);
 		}
 
 		edited=false;
@@ -434,7 +434,7 @@ void Mountain::setExit(char* str) {
 
 
 
-void Mountain::fillMatrixForRow(int index) {
+void Mountain::fillDistanceMatrixForRow(int index) {
 	vector<Vertex<Point> *> theArray=mountainGraph->getVertexSet();
 	for(int i=0;i<distanceMatrix.size();i++){
 
@@ -512,9 +512,7 @@ int Mountain::moveTouristsFromPoint(Vertex<Point> *origin, Vertex<Point> *destin
 
 
 	Vehicle prototype=*vehiclePt.getVehicle(0);
-	cout<<"used prototype with elapsed time: "<<prototype.getElapsedTime();
 	prototype.incrementElapsedTime(time);
-	cout<<" changed to "<<prototype.getElapsedTime()<<endl;
 
 	if(vehicle!=destination){
 		vehiclePt.removeVehicle(0);
@@ -554,9 +552,6 @@ int Mountain::moveTouristsFromPoint(Vertex<Point> *origin, Vertex<Point> *destin
 
 	//TODO shouldnt be returning this
 	return prototype.getElapsedTime();
-}
-
-int Mountain::moveTouristsToExit(Vertex<Point>* origin) {
 }
 
 int Mountain::distanceFrom(int index1, int index2) {

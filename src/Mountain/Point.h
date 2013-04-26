@@ -1,5 +1,6 @@
 /**
- * @brief A class to encapsulate all the information available about a point such as the number of tourists in there or vehicles present there.
+ *
+ @brief A class to encapsulate all the information available about a point such as the number of tourists in there or vehicles present there.
  *
  */
 

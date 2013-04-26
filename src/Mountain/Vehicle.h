@@ -56,7 +56,19 @@ public:
 	 */
 
 	int getCapacity();
+
+	/**
+	 * @brief A function that returns the time used for the vehicle to move so far
+	 * @return The time used for the vehicle to move so far
+	 */
 	int getElapsedTime() const;
+	/**
+	 *
+	 * @brief A function used to increment the time used for the vehicle to move so far
+	 * @param increment The amount to be added
+	 * @return The value of the elapsedTime parameter after the incrementation is done
+	 *
+	 */
 	int incrementElapsedTime(int increment);
 };
 
