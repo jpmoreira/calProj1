@@ -16,7 +16,7 @@
 class Vehicle {
 
 	int nrSeats;
-	int occupiedSeats;
+	int elapsedTime;
 
 
 public:
@@ -44,22 +44,9 @@ public:
 
 	Vehicle(Vehicle *v);
 
-	/**
-	 * @brief A method that attempts to add a certain number of passengers to the Vehicle.
-	 * @return The number of passengers for whom there was no seats left.
-	 * @param nrPassengers The number of passengers to add.
-	 *
-	 */
 
-	int addPassengers(int nrPassengers);
 
-	/**
-	 *
-	 * @brief A method that informs the caller if the Vehicle is full.
-	 * @return Returns true if there are no empty seats left, false otherwise.
-	 *
-	 */
-	bool isFull();
+
 
 	/**
 	 *
@@ -69,7 +56,8 @@ public:
 	 */
 
 	int getCapacity();
-	int getOccupiedSeats();
+	int getElapsedTime() const;
+	int incrementElapsedTime(int increment);
 };
 
 #endif /* VEHICLE_H_ */

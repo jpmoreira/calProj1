@@ -191,9 +191,9 @@ bool Mountain::addVehicleToPoint(string ptName, int nr_seats) {
 	Point thePt(ptName);
 	Vertex<Point> *v=mountainGraph->getVertex(thePt);
 	if(v!=NULL){thePt=v->getInfo();}
-	if(v!=NULL && thePt.getVehicle()==NULL){//if there is such a point with no vehicle in it
+	if(v!=NULL ){//if there is such a point with no vehicle in it
 		edited=true;
-		thePt.setVehicle(theVehicle);//TODO not working see why
+		thePt.addVehicle(theVehicle);//TODO not working see why
 		v->setInfo(thePt);
 		vehiclesPointArray.push_back(v);//add to array
 
@@ -302,13 +302,13 @@ string Mountain::makeLabel(Point& pt) {
 		myStr<<" E("<<pt.getNrTourists()<<")";
 	}
 
-	else if(pt.getVehicle()==NULL){//if it has no vehicle
+	else if(pt.getVehicle(0)==NULL){//if it has no vehicle
 		myStr<<" T("<<pt.getNrTourists()<<")";
 
 	}
 	else{
-		Vehicle *v=pt.getVehicle();
-		myStr<<" V("<<v->getCapacity()<<","<<v->getOccupiedSeats()<<")";
+		Vehicle *v=pt.getVehicle(0);
+		myStr<<" V("<<v->getCapacity()<<","<<pt.getNrTourists()<<")";
 
 	}
 		return myStr.str();
@@ -330,22 +330,7 @@ int Mountain::generateEdgeID(int sourceID, int destID) {
 
 }
 
-int Mountain::shortestDistance(Point pt1, Point pt2) {
-	computeDistances();//only executed one time or if graph is edited
-	int pt1Index=-1;
-	int pt2Index=-1;
-	vector<Vertex<Point> *> theArray=mountainGraph->getVertexSet();
-	for(unsigned int i=0;i<theArray.size();i++){
-		if(theArray[i]->getInfo()==pt1){pt1Index=i;}
-		if(theArray[i]->getInfo()==pt2){pt2Index=i;}
-	}
 
-
-	if(pt1Index>0 && pt2Index>0){return distanceMatrix[pt1Index][pt2Index];}
-
-
-	else{return -1;}
-}
 
 void Mountain::computeDistances() {
 	if(edited){
@@ -382,7 +367,7 @@ Point Mountain::findNearestAverageNonOccupiedPoint() {
 	for(int i=0;i<distanceMatrix.size();i++){
 		Point pt= mountainGraph->getVertexSet()[i]->getInfo();
 
-		if(pt.getVehicle()==NULL){
+		if(pt.getVehicle(0)==NULL){
 			int sum=0;
 			for(int f=0;f<distanceMatrix.size();f++){
 				sum+=distanceMatrix[i][f];
@@ -409,6 +394,11 @@ bool Mountain::AddTouristToPoint(string name, int nrToAdd) {
 	thePt=v->getInfo();
 	thePt.addTourist(nrToAdd);
 	v->setInfo(thePt);
+
+	if(v!=exit){
+		lostTouristsArray.push_back(v);
+		make_heap(lostTouristsArray.begin(),lostTouristsArray.end(),&compareVertexPointers);
+	}
 
 	tempOutputFile<<"AT "<<name<<" "<<nrToAdd<<endl;
 	cout<<"Adding "<<nrToAdd<<" Tourists to point named "<<name<<endl;
@@ -442,9 +432,7 @@ void Mountain::setExit(char* str) {
 	setExit(theStr);
 }
 
-void Mountain::moveVehicleTo(Vertex<Point>* origin,
-		Vertex<Point>* destination) {
-}
+
 
 void Mountain::fillMatrixForRow(int index) {
 	vector<Vertex<Point> *> theArray=mountainGraph->getVertexSet();
@@ -494,4 +482,210 @@ void Mountain::placeVehicles(int nrVehicles, int capacity) {
 	}
 	drawOnEdit=true;
 
+}
+
+int Mountain::moveTouristsFromPoint(Vertex<Point> *origin, Vertex<Point> *destination,vector<Point> *path) {
+	int time=0;
+
+	Vertex<Point > *vehicle=getNearestVehicle(origin);
+	if(vehicle==NULL){return -1;}
+	time+=distanceFrom(origin->getIndex(),vehicle->getIndex());
+	pathFrom(origin->getIndex(),vehicle->getIndex(),path);
+	time+=distanceFrom(origin->getIndex(),destination->getIndex());
+	pathFrom(origin->getIndex(),destination->getIndex(),path);
+
+
+	Point originPt=origin->getInfo();
+	Point destPt=destination->getInfo();
+	Point vehiclePt=vehicle->getInfo();
+
+	originPt.shipTouristsTo(destPt,vehiclePt);
+
+	removePointFromVehicleArray(vehicle);
+
+	//order should be this in order for the destination to be ablue to be the vehicle point as well
+//	vector<Vehicle *>vs=vehiclePt.getVehicles();
+//	cout<<"Possible choices: "<<endl;
+//	for(int i=0;i<vs.size();i++){
+//		cout<<"time= "<<vs[i]->getElapsedTime()<<endl;
+//	}
+
+
+	Vehicle prototype=*vehiclePt.getVehicle(0);
+	cout<<"used prototype with elapsed time: "<<prototype.getElapsedTime();
+	prototype.incrementElapsedTime(time);
+	cout<<" changed to "<<prototype.getElapsedTime()<<endl;
+
+	if(vehicle!=destination){
+		vehiclePt.removeVehicle(0);
+		destPt.addVehicle(prototype);
+		destination->setInfo(destPt);
+		vehicle->setInfo(vehiclePt);
+		viewer->setVertexLabel(vehiclePt.getID(),makeLabel(vehiclePt));
+	}
+	else{
+		destPt.removeVehicle(0);
+		destPt.addVehicle(prototype);
+		destination->setInfo(destPt);
+	}
+	vehiclesPointArray.push_back(destination);
+
+
+	removePointFromLostArray(origin);
+	origin->setInfo(originPt);
+
+//	make_heap(lostTouristsArray.begin(),lostTouristsArray.end());
+
+
+
+
+
+
+
+
+
+
+	viewer->setVertexLabel(destPt.getID(),makeLabel(destPt));
+	viewer->setVertexLabel(originPt.getID(),makeLabel(originPt));
+	viewer->rearrange();
+
+	addPointToLostArray(origin);
+
+
+	//TODO shouldnt be returning this
+	return prototype.getElapsedTime();
+}
+
+int Mountain::moveTouristsToExit(Vertex<Point>* origin) {
+}
+
+int Mountain::distanceFrom(int index1, int index2) {
+	computeDistances();
+	return distanceMatrix[index1][index2];
+}
+
+void Mountain::pathFrom(int index1, int index2,vector<Point > *path) {
+
+	int index=index1;
+	Vertex<Point> *v=mountainGraph->getVertexSet()[index];
+	while(index!=index2){
+		path->push_back(v->getInfo());
+		index=pathMatrix[index][index2];
+		v=mountainGraph->getVertexSet()[index];
+	}
+	path->push_back(v->getInfo());
+}
+
+Vertex<Point>* Mountain::getVertex(string pointName) {
+	Point temp=Point(pointName);
+	return mountainGraph->getVertex(temp);
+
+}
+
+int Mountain::makeAnimatedMoveFromPoint(Vertex<Point>* origin,
+		Vertex<Point>* destination) {
+	vector<Point> path;
+	int time=moveTouristsFromPoint(origin,destination,&path);
+	paintPath(path);
+	sleep(10);
+	unpaintPath(path);
+	return time;
+}
+
+void Mountain::paintPath(vector<Point> &path) {
+	int originID,destID,edgeID;
+	for(int i=0;i<path.size()-1;i++){
+		originID=path[i].getID();
+		destID=path[i+1].getID();
+		edgeID=generateEdgeID(originID,destID);
+		viewer->setEdgeColor(edgeID,"red");
+	}
+	viewer->rearrange();
+}
+
+void Mountain::unpaintPath(vector<Point> &path) {
+	int originID,destID,edgeID;
+		for(int i=0;i<path.size()-1;i++){
+			originID=path[i].getID();
+			destID=path[i+1].getID();
+			edgeID=generateEdgeID(originID,destID);
+			viewer->setEdgeColor(edgeID,"blue");
+		}
+		viewer->rearrange();
+}
+
+void Mountain::evaquate() {
+	if(exit==NULL){return;}
+	int sum=0;
+	int nrTourists=0;
+	int increment;
+	while(!lostTouristsArray.empty()){
+		Vertex<Point> *origin=lostTouristsArray.front();
+		increment=origin->getInfo().getNrTourists();
+		sum+=makeAnimatedMoveFromPoint(origin,exit);
+		increment-=origin->getInfo().getNrTourists();
+		nrTourists+=increment;
+
+	}
+	cout<<"Nr tourist evaquated: "<<nrTourists<< "Average Time: "<<((float) sum)/nrTourists<<endl;
+}
+
+Vertex<Point> *Mountain::getNearestVehicle(int ptIndex){
+	if(vehiclesPointArray.size()==0){return NULL;}
+	Vertex<Point> *nearestVehicle=vehiclesPointArray[0];
+	int elapsedTime=vehiclesPointArray[0]->getInfo().getVehicle(0)->getElapsedTime();
+	int bestDist=distanceFrom(ptIndex,nearestVehicle->getIndex())+elapsedTime;
+	for(int i=1;i<vehiclesPointArray.size();i++){
+		elapsedTime=vehiclesPointArray[i]->getInfo().getVehicle(0)->getElapsedTime();
+		if(distanceFrom(vehiclesPointArray[i]->getIndex(),ptIndex)+elapsedTime<bestDist){
+			nearestVehicle=vehiclesPointArray[i];
+			bestDist=distanceFrom(vehiclesPointArray[i]->getIndex(),ptIndex);
+		}
+	}
+	return nearestVehicle;
+
+}
+
+Vertex<Point>* Mountain::getNearestVehicle(Vertex<Point>* pt) {
+	return getNearestVehicle(pt->getIndex());
+
+}
+
+bool compareVertexPointers(const Vertex<Point> * v1,const Vertex<Point> * v2){
+	Point pt1=v1->getInfo();
+	Point pt2=v2->getInfo();
+
+	return pt1<pt2;
+}
+
+void Mountain::addPointToLostArray(Vertex<Point>* pt) {
+	if(pt->getInfo().getNrTourists()<=0){return;}
+	lostTouristsArray.push_back(pt);
+	make_heap(lostTouristsArray.begin(),lostTouristsArray.end(),&compareVertexPointers);
+}
+
+void Mountain::addPointToVehicleArray(Vertex<Point>* pt) {
+	if(pt->getInfo().getVehicle(0)==NULL){return;}
+	vehiclesPointArray.push_back(pt);
+}
+
+void Mountain::removePointFromLostArray(Vertex<Point>* pt) {
+	for(int i=0;i<lostTouristsArray.size();i++){
+		if(lostTouristsArray[i]==pt){
+			lostTouristsArray.erase(lostTouristsArray.begin()+i);
+			return;
+		}
+	}
+	make_heap(lostTouristsArray.begin(),lostTouristsArray.end(),&compareVertexPointers);
+
+
+}
+
+void Mountain::removePointFromVehicleArray(Vertex<Point>* pt) {
+	for(int i=0;i<vehiclesPointArray.size();i++){
+		if(vehiclesPointArray[i]==pt){
+			vehiclesPointArray.erase(vehiclesPointArray.begin()+i);
+			return;
+		}
+	}
 }

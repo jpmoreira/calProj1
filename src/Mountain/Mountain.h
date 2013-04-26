@@ -34,6 +34,7 @@ private:
 	static fstream tempOutputFile;
 
 public:
+	vector< Vertex<Point> *> lostTouristsArray;//TODO make private as soon as it's not needed;
 	Mountain();
 	Mountain(string sourceFile);
 	bool saveToFile(string path);
@@ -52,6 +53,14 @@ public:
 	~Mountain();
 	static fstream & getFile();
 	void placeVehicles(int nrVehicles,int capacity);
+	Vertex<Point> * getVertex(string pointName);
+	int moveTouristsFromPoint(Vertex<Point> *origin,Vertex<Point> *destination,vector<Point> *path);//TODO make private as soon as it is tested
+	int makeAnimatedMoveFromPoint(Vertex<Point> *origin,Vertex<Point> *destination);//TODO move to private as soon as it's tested maybe??
+
+	void paintPath(vector<Point> &path);
+	void unpaintPath(vector<Point> &path);
+
+	void evaquate();
 private:
 
 
@@ -70,13 +79,26 @@ private:
 	int generateEdgeID(int sourceID,int destID);
 
 
-	int shortestDistance(Point pt1, Point pt2);//TODO
 
 	void fillMatrixForRow(int index);
-
+	int moveTouristsToExit(Vertex<Point> *origin);
+	int distanceFrom(int index1,int index2);
+	void pathFrom(int index1,int index2,vector<Point > *path);
+	Vertex<Point> *getNearestVehicle(Vertex<Point>* pt);
+	Vertex<Point> *getNearestVehicle(int ptIndex);
+	void addPointToLostArray(Vertex<Point> * pt);
+	void addPointToVehicleArray(Vertex<Point> *pt);
+	void removePointFromLostArray(Vertex<Point> * pt);
+	void removePointFromVehicleArray(Vertex<Point> *pt);
 
 
 
 };
+
+
+bool compareVertexPointers(const Vertex<Point> * v1,const Vertex<Point> * v2);
+
+
+
 
 #endif /* MOUNTAIN_H_ */

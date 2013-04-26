@@ -49,7 +49,7 @@ public:
 	int getIndegree() const;
 	void setIndex(int i);
 	int getIndex();
-	bool operator<(const Vertex<T> vertex);
+	bool operator< (const Vertex<T>& b);
 
 	Vertex* path;
 };
@@ -775,5 +775,6 @@ template<class T>
 inline int Vertex<T>::getIndex() {
 	return index;
 }
+
 
 #endif /* GRAPH_H_ */

@@ -11,11 +11,13 @@ int main(int argc, char **argv) {
 Mountain myMountain=Mountain("/home/mppl/Desktop/file.save");
 
 //myMountain.computeDistances();
-cout<<endl;
-myMountain.placeVehicles(3,4);
-myMountain.printPathMatrix();
-cout<<endl;
-myMountain.printDistanceMatrix();
+
+
+myMountain.placeVehicles(2,4);
+sleep(10);
+
+myMountain.evaquate();
+cout<<"done"<<endl;
 
 }
 

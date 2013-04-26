@@ -8,12 +8,12 @@
 #include "Point.h"
 #include <cstddef>
 #include <iostream>
-using std::cout;
-using std::endl;
+#include <algorithm>
+using namespace std;
 
 int Point::count=0;
 
-Point::Point(string &newAlias):vehicle(NULL),lostTourists(0),id(count) {
+Point::Point(string &newAlias):vehicles(vector<Vehicle *>(0)),lostTourists(0),id(count) {
 	if(newAlias!=""){
 		alias=string(newAlias);
 	}
@@ -24,26 +24,22 @@ Point::Point(string &newAlias):vehicle(NULL),lostTourists(0),id(count) {
 }
 
 Point::Point(const Point& pt):lostTourists(pt.lostTourists),alias(pt.alias),id(pt.id) {
-	if(pt.vehicle!=NULL){
-		vehicle=new Vehicle(pt.vehicle);
+	vector<Vehicle *> vCopy=pt.getVehicles();
+	if(vCopy.size()>0){
+		for(int i=0;i<vCopy.size();i++){
+			Vehicle *v=new Vehicle(vCopy[i]);
+			vehicles.push_back(v);
+		}
+		make_heap(vehicles.begin(),vehicles.end(),&vehiclePointerComparator);
 	}
 	else{
-		vehicle=NULL;
+		vehicles=vector<Vehicle *>(0);
 	}
 }
 
-Point::Point(Vehicle& v,string &newAlias):vehicle(new Vehicle(v)),lostTourists(0),id(count) {
-	if(newAlias!=""){
-		alias=string(newAlias);
-	}
-	else{
-		alias="point "+count;
-	}
-		count++;
 
-}
 
-Point::Point(string &newAlias,int nrTourists):lostTourists(nrTourists),vehicle(NULL),id(count) {
+Point::Point(string &newAlias,int nrTourists):lostTourists(nrTourists),vehicles(vector<Vehicle *>(0)),id(count) {
 	if(newAlias!=""){
 		alias=string(newAlias);
 	}
@@ -52,49 +48,54 @@ Point::Point(string &newAlias,int nrTourists):lostTourists(nrTourists),vehicle(N
 	}
 	count++;
 }
-bool Point::setVehicle(Vehicle& v) {//returns if there was a vehicle there previously
-	bool ret=true;
-	if(vehicle!=NULL){
-		ret=false;
-	}
-	vehicle=new Vehicle(v);
-	return ret;
+void Point::addVehicle(Vehicle& v) {//returns if there was a vehicle there previously
+	vehicles.push_back(new Vehicle(v));
+	make_heap(vehicles.begin(),vehicles.end(),&vehiclePointerComparator);
 }
 
 Point::~Point() {
-	if(vehicle!=NULL){
-		delete vehicle;
+	for(int i=0;i<vehicles.size();i++){
+		delete vehicles[i];
+		vehicles[i]=NULL;
 	}
 }
 
 
-int Point::shipTourists() {
+int Point::shipTouristsTo(Point &pt,Vehicle *v) {
+	if(v==NULL){return -1;}
+	int cap=v->getCapacity();
+	cout<<"Moving ";
+	if(cap>=lostTourists){
+		cout<<lostTourists;
+		pt.lostTourists+=lostTourists;
+		lostTourists=0;
 
-	if(vehicle!=NULL){
-		lostTourists=vehicle->addPassengers(lostTourists);
 	}
+	else{
+		cout<<cap;
+		pt.lostTourists+=cap;
+		lostTourists-=cap;
+	}
+	cout<<" tourists from point "<<alias<<" to point "<<pt.alias<<endl;
 	return lostTourists;
+
+}
+int Point::shipTouristsTo(Point& dest, Point& vehiclePoint) {
+	Vehicle *v=vehiclePoint.getVehicle(0);
+	return shipTouristsTo(dest,v);
+
 }
 
-Vehicle* Point::getVehicle() {
-	return vehicle;
+Vehicle* Point::getVehicle(int i) {
+	if(i>=vehicles.size()){return NULL;}
+	return vehicles[i];
+}
+vector<Vehicle*> Point::getVehicles() const{
+	return vehicles;
 }
 
-Point::Point(Vehicle* v):vehicle(new Vehicle(v)),lostTourists(0),id(count++) {
-}
-
-bool Point::moveVehicleFrom(Point &p) {//returns true on sucess
-	if(vehicle!=NULL){//if there is a vehicle here already
-		return false;
-	}
-	else if(p.vehicle==NULL){
-		return false;
-	}
-
-	vehicle=p.vehicle;
-	p.vehicle=NULL;
-	return true;
-
+Point::Point(Vehicle* v):vehicles(vector<Vehicle *>(0)),lostTourists(0),id(count++) {
+	vehicles.push_back(new Vehicle(v));
 }
 
 
@@ -118,4 +119,47 @@ int Point::getNrTourists() {
 
 void Point::addTourist(int nr) {
 	lostTourists+=nr;
+}
+
+void Point::removeVehicle(int i) {
+	if(i>=vehicles.size()){return;}
+	//cout<<"will remove at point "<<alias<<". prior size= "<<vehicles.size()<<endl;
+	delete vehicles[i];
+	vehicles[i]=NULL;
+	vehicles.erase(vehicles.begin()+i);
+	make_heap(vehicles.begin(),vehicles.end(),&vehiclePointerComparator);
+
+}
+
+
+
+Point Point::operator =(const Point& pt){
+	lostTourists=pt.lostTourists;
+	alias=pt.alias;
+	id=pt.id;
+
+
+	for(int i=0;i<vehicles.size();i++){//remove all vehicles we have
+		delete vehicles[i];
+	}
+	vehicles=vector<Vehicle *>(0);
+
+
+	vector<Vehicle *> ptVehicles=pt.getVehicles();
+	for(int i=0;i<ptVehicles.size();i++){
+		vehicles.push_back(new Vehicle(ptVehicles[i]));
+	}
+	make_heap(vehicles.begin(),vehicles.end(),&vehiclePointerComparator);
+
+	return *this;
+}
+
+bool Point::operator <(const Point& pt) const {
+	return lostTourists<pt.lostTourists;
+}
+
+bool vehiclePointerComparator(const Vehicle * v1,const Vehicle *v2){
+	int time1=v1->getElapsedTime();
+	int time2=v2->getElapsedTime();
+	return time1>time2;
 }
